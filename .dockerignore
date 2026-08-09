@@ -1,0 +1,10 @@
+.git
+.github
+var
+vendor
+tests
+docs
+.idea
+.vscode
+docker-compose*.yml
+Dockerfile

@@ -1,0 +1,35 @@
+services:
+    database:
+        image: postgres:16-alpine
+        environment:
+            POSTGRES_DB: fizzbuzz
+            POSTGRES_USER: app
+            POSTGRES_PASSWORD: app
+        ports:
+            - "5432:5432"
+        volumes:
+            - database_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U app -d fizzbuzz"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    app:
+        build:
+            context: .
+            target: runtime
+        environment:
+            APP_ENV: prod
+            APP_DEBUG: 0
+            APP_SECRET: change_me_in_production
+            RUN_MIGRATIONS: "1"
+            DATABASE_URL: "postgresql://app:app@database:5432/fizzbuzz?serverVersion=16&charset=utf8"
+        ports:
+            - "8080:8080"
+        depends_on:
+            database:
+                condition: service_healthy
+
+volumes:
+    database_data:

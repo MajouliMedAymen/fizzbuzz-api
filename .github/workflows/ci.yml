@@ -1,0 +1,69 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    quality:
+        name: Tests & static analysis
+        runs-on: ubuntu-latest
+
+        services:
+            postgres:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_DB: fizzbuzz
+                    POSTGRES_USER: app
+                    POSTGRES_PASSWORD: app
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U app"
+                    --health-interval 5s
+                    --health-timeout 3s
+                    --health-retries 10
+
+        env:
+            DATABASE_URL: postgresql://app:app@127.0.0.1:5432/fizzbuzz?serverVersion=16&charset=utf8
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.3'
+                  extensions: pdo_pgsql, intl
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Install dependencies
+              run: composer install --prefer-dist --no-progress
+
+            - name: Coding standards
+              run: php vendor/bin/php-cs-fixer fix --dry-run --diff
+
+            - name: Prepare the test database
+              run: |
+                  php bin/console doctrine:database:create --env=test --if-not-exists
+                  php bin/console doctrine:migrations:migrate --no-interaction --env=test
+
+            - name: Warm the dev container (needed by phpstan-symfony)
+              run: php bin/console cache:warmup --env=dev
+
+            - name: Static analysis
+              run: php vendor/bin/phpstan analyse --no-progress
+
+            - name: Tests
+              run: php vendor/bin/phpunit
+
+    docker:
+        name: Docker image builds
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  push: false

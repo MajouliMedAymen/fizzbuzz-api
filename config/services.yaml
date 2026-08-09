@@ -1,0 +1,21 @@
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    App\Statistics\HitRecorderInterface: '@App\Statistics\FailSafeHitRecorder'
+
+    App\Statistics\FailSafeHitRecorder:
+        arguments:
+            $decoratedRecorder: '@App\Statistics\Doctrine\DoctrineHitRecorder'
+
+    App\Statistics\MostFrequentRequestProviderInterface: '@App\Statistics\Doctrine\DoctrineMostFrequentRequestProvider'
